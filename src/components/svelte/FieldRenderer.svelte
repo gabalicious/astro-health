@@ -1,5 +1,6 @@
 <script lang="ts" generics="TValues extends Record<string, string>">
 import type { FullAutoFill } from 'svelte/elements';
+import Checkbox from '@/components/svelte/ui/Checkbox.svelte';
 import Input from '@/components/svelte/ui/Input.svelte';
 import Label from '@/components/svelte/ui/Label.svelte';
 import RadioCards from '@/components/svelte/ui/RadioCards.svelte';
@@ -50,14 +51,31 @@ function change(handleChange: (value: string) => void, value: string) {
   {#snippet children(f: AnyFieldApi)}
     {@const errors = visibleErrors(f.state.meta.errors, f.state.meta.isBlurred)}
     <div class="grid gap-2">
-      <div class="grid gap-1">
-        <Label for={field.name}>{field.label}</Label>
-        {#if field.hint}
-          <p class="text-sm text-muted-foreground">{field.hint}</p>
-        {/if}
-      </div>
+      <!-- Checkboxes label to the right; every other kind labels above. -->
+      {#if field.kind !== 'checkbox'}
+        <div class="grid gap-1">
+          <Label for={field.name}>{field.label}</Label>
+          {#if field.hint}
+            <p class="text-sm text-muted-foreground">{field.hint}</p>
+          {/if}
+        </div>
+      {/if}
 
-      {#if field.kind === 'segmented'}
+      {#if field.kind === 'checkbox'}
+        <div class="flex items-start gap-3">
+          <Checkbox
+            id={field.name}
+            checked={f.state.value === 'true'}
+            onCheckedChange={(checked) => change(f.handleChange, checked ? 'true' : '')}
+          />
+          <div class="grid gap-1">
+            <Label for={field.name}>{field.label}</Label>
+            {#if field.hint}
+              <p class="text-sm text-muted-foreground">{field.hint}</p>
+            {/if}
+          </div>
+        </div>
+      {:else if field.kind === 'segmented'}
         <Segmented
           name={field.name}
           value={f.state.value}

@@ -47,16 +47,33 @@ schema-driven configs rendered by one generic wizard per framework, so the Vue
 and Svelte versions can be compared on equal footing. Nothing is duplicated
 between them except the rendering layer.
 
-1. `/signup/{vue,svelte}` posts `/api/signup`, which creates the user and sets an
+1. `/signup/{vue,svelte}` posts `/api/signup`, which creates the user (scrypt
+   password hash, per-user salt — stub-grade, not production auth) and sets an
    http-only session cookie, then redirects to…
 2. `/onboarding/{vue,svelte}`, which posts `/api/onboarding`. That route is
    behind `requireSession`, so a profile always belongs to somebody.
+3. `/login/{vue,svelte}` posts `/api/login` (verifyCredentials, constant-time
+   compare; failures are deliberately **form-level** — "Wrong email or
+   password." never blames a field). The response's `onboarded` flag routes the
+   redirect: no profile → onboarding, otherwise → settings. "Remember me"
+   stretches the session from 7 to 30 days. `/api/logout` clears both the store
+   row and the cookie.
+4. `/settings/{vue,svelte}` fetches `GET /api/profile` on mount (401 → login,
+   404 → onboarding), converts the canonical payload back to a draft with
+   `draftFromProfile`, and renders **the same onboarding config** through
+   `FormWizard mode="single"`: every step becomes a section, one Save button,
+   gated on TanStack's `isDefaultValue` so it stays disabled until something
+   actually changed. Saving posts `/api/profile` and shows the recomputed plan.
 
 - `src/lib/schema/account.ts` — email and password, nothing else.
 - `src/lib/schema/profile.ts` — the onboarding answers. Numeric
   fields are strings on the way in (that is what a DOM input gives you) and
   numbers on the way out, so the schema is also the parse boundary. Client and
   server both use it.
+- `draftFromProfile` is the **inverse** of that boundary, for prefilled edit
+  forms. Its one subtlety: total inches are rounded to one decimal *before* the
+  ft/in split — splitting first lets 91.4 cm (a stored 3'0") decompose as an
+  invalid 2'12". Round-trip tests pin this.
 - That boundary is also where **units** are resolved. The wire carries what the
   user typed plus their chosen `unitSystem`; ranges are checked in *their* units
   so messages say "at most 880" to someone entering pounds, and `z.output` is
@@ -81,8 +98,8 @@ between them except the rendering layer.
   when a config has a single step, so the same engine renders both flows), and
   thin `SignupForm` / `OnboardingWizard` wrappers binding config to endpoint.
 - `src/server/store.ts` — in-memory users, sessions and profiles. It resets on
-  restart, and passwords are deliberately not stored until hashing lands with a
-  real database.
+  restart. Passwords are scrypt-hashed with per-user salts and compared in
+  constant time — stub-grade, but never plaintext.
 - `src/server/` — the Hono app, mounted at `src/pages/api/[...path].ts`. It owns
   the `/api` prefix via `.basePath('/api')` because Astro forwards the original
   URL untouched.
@@ -100,6 +117,12 @@ Conventions worth keeping:
   variants use nothing more than this — `heightCm` and `heightFt`/`heightIn` are
   ordinary fields with opposite `showIf`s, and the wizard's existing reset of
   hidden fields keeps the unused pair empty.
+- `FormWizard`'s `initialValues` prop is read **once** at form creation —
+  callers must gate rendering until the fetch completes (see `SettingsForm`).
+- The `checkbox` field kind keeps drafts all-string: checked is `'true'`,
+  unchecked is `''`. It is also the one kind that labels to the right.
+- In Svelte components never name a variable `state` — `$state` then parses as
+  a store subscription to it.
 - Fields declare **exactly one** validator cause (`onChange`). Declaring several
   leaves stale entries in TanStack's error map — `validateField(_, 'submit')`
   fills every declared cause, but typing only clears `onChange`, so a lingering

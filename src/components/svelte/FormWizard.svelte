@@ -12,6 +12,8 @@ type OkResult = Extract<ApiResult, { ok: true }>;
 let {
   config,
   submit,
+  mode = 'wizard',
+  initialValues,
   submitLabel,
   submittingLabel,
   successTitle,
@@ -21,20 +23,26 @@ let {
 }: {
   config: WizardConfig<TValues>;
   submit: (values: TValues) => Promise<ApiResult>;
+  /** 'wizard' (default): one step at a time. 'single': all steps as sections, one Save. */
+  mode?: 'wizard' | 'single';
+  /** Seeds the form (e.g. settings prefill). Read once — gate rendering until known. */
+  initialValues?: TValues;
   submitLabel: string;
   submittingLabel: string;
   successTitle: string;
   successDescription: string;
   /** Lets the caller navigate on success instead of resting on the done card. */
-  onSuccess?: (result: { userId: string }) => void;
+  onSuccess?: (result: OkResult) => void;
   /** Replaces the whole success card; omit it to keep the static one. */
   success?: Snippet<[{ result: OkResult }]>;
 } = $props();
 
 const steps = config.steps;
+const defaults = initialValues ?? config.defaults;
 
-const form = createForm(() => ({ defaultValues: config.defaults }));
+const form = createForm(() => ({ defaultValues: defaults }));
 const selector = form.useSelector((state) => state.values);
+const defaultSelector = form.useSelector((state) => state.isDefaultValue);
 
 let stepIndex = $state(0);
 let stepAttempted = $state(false);
@@ -45,18 +53,23 @@ let successResult = $state<OkResult | null>(null);
 
 const values = $derived(selector.current as TValues);
 const step = $derived(steps[stepIndex]);
-const fields = $derived(visibleFields(step, values));
-const isLastStep = $derived(stepIndex === steps.length - 1);
+const activeSteps = $derived(mode === 'single' ? steps : [step]);
+const fieldsToValidate = $derived(activeSteps.flatMap((s) => visibleFields(s, values)));
+const isLastStep = $derived(mode === 'single' || stepIndex === steps.length - 1);
 const progress = $derived(((stepIndex + 1) / steps.length) * 100);
 // A one-step form is just a form; the step chrome would be noise.
-const showStepChrome = $derived(steps.length > 1);
+const showStepChrome = $derived(mode === 'wizard' && steps.length > 1);
+// In single mode, Save means "apply my edits" — nothing changed, nothing to save.
+const submitDisabled = $derived(
+  status === 'submitting' || (mode === 'single' && defaultSelector.current),
+);
 
 // A field the user can no longer see should not keep contributing an answer.
 $effect(() => {
   for (const s of steps) {
     for (const field of s.fields) {
       if (!field.showIf || field.showIf(values)) continue;
-      const fallback = config.defaults[field.name];
+      const fallback = defaults[field.name];
       if (values[field.name] !== fallback) {
         form.setFieldValue(field.name as never, fallback as never);
       }
@@ -73,7 +86,7 @@ async function validateStep(): Promise<boolean> {
   // Use this run's results rather than the field's aggregated meta, which can
   // still hold errors recorded under a validation cause that has not re-run.
   const results = await Promise.all(
-    fields.map((field) => form.validateField(field.name, 'submit')),
+    fieldsToValidate.map((field) => form.validateField(field.name, 'submit')),
   );
   return results.every((errors: unknown[]) => errors.length === 0);
 }
@@ -104,13 +117,16 @@ async function send() {
   serverErrors = result.fieldErrors;
   serverMessage = result.message;
 
-  // Send the user back to the earliest step the server took issue with.
-  const earliest = Object.keys(result.fieldErrors)
-    .map((name) => stepIndexOfField(config, name))
-    .filter((index): index is number => index !== undefined)
-    .sort((a, b) => a - b)[0];
+  // Send the user back to the earliest step the server took issue with. In
+  // single mode every field is already on screen, so errors render in place.
+  if (mode === 'wizard') {
+    const earliest = Object.keys(result.fieldErrors)
+      .map((name) => stepIndexOfField(config, name))
+      .filter((index): index is number => index !== undefined)
+      .sort((a, b) => a - b)[0];
 
-  if (earliest !== undefined) goToStep(earliest, true);
+    if (earliest !== undefined) goToStep(earliest, true);
+  }
 }
 
 function clearServerError(name: string) {
@@ -133,25 +149,27 @@ function clearServerError(name: string) {
   {/if}
 {:else}
   <div class="w-full max-w-xl rounded-xl border bg-card text-card-foreground shadow-sm">
-    <div class="grid gap-3 px-6 pt-6">
-      {#if showStepChrome}
-        <div class="flex items-center justify-between text-sm text-muted-foreground">
-          <span>Step {stepIndex + 1} of {steps.length}</span>
-          <span>{Math.round(progress)}%</span>
-        </div>
-        <Progress value={progress} />
-      {/if}
-      <div class={showStepChrome ? 'mt-4 grid gap-1.5' : 'grid gap-1.5'}>
-        <h2 class="text-lg font-semibold leading-none">{step.title}</h2>
-        {#if step.description}
-          <p class="text-sm text-muted-foreground">{step.description}</p>
+    {#if mode === 'wizard'}
+      <div class="grid gap-3 px-6 pt-6">
+        {#if showStepChrome}
+          <div class="flex items-center justify-between text-sm text-muted-foreground">
+            <span>Step {stepIndex + 1} of {steps.length}</span>
+            <span>{Math.round(progress)}%</span>
+          </div>
+          <Progress value={progress} />
         {/if}
+        <div class={showStepChrome ? 'mt-4 grid gap-1.5' : 'grid gap-1.5'}>
+          <h2 class="text-lg font-semibold leading-none">{step.title}</h2>
+          {#if step.description}
+            <p class="text-sm text-muted-foreground">{step.description}</p>
+          {/if}
+        </div>
       </div>
-    </div>
+    {/if}
 
     <div class="px-6 py-6">
       <form
-        class="grid gap-6"
+        class="grid gap-8"
         novalidate
         onsubmit={(event) => {
           event.preventDefault();
@@ -167,19 +185,32 @@ function clearServerError(name: string) {
           </p>
         {/if}
 
-        <div class="grid grid-cols-2 gap-6">
-          {#each fields as field (field.name)}
-            <div class={field.span === 'half' ? 'col-span-1' : 'col-span-2'}>
-              <FieldRenderer
-                {field}
-                {form}
-                {stepAttempted}
-                serverErrors={serverErrors[field.name]}
-                onClearServerError={clearServerError}
-              />
+        {#each activeSteps as s (s.id)}
+          <section class="grid gap-4">
+            {#if mode === 'single'}
+              <div class="grid gap-1">
+                <h3 class="text-base font-semibold leading-none">{s.title}</h3>
+                {#if s.description}
+                  <p class="text-sm text-muted-foreground">{s.description}</p>
+                {/if}
+              </div>
+            {/if}
+
+            <div class="grid grid-cols-2 gap-6">
+              {#each visibleFields(s, values) as field (field.name)}
+                <div class={field.span === 'half' ? 'col-span-1' : 'col-span-2'}>
+                  <FieldRenderer
+                    {field}
+                    {form}
+                    {stepAttempted}
+                    serverErrors={serverErrors[field.name]}
+                    onClearServerError={clearServerError}
+                  />
+                </div>
+              {/each}
             </div>
-          {/each}
-        </div>
+          </section>
+        {/each}
 
         <!-- Keeps Enter-to-submit working without a second visible button. -->
         <button type="submit" class="hidden" tabindex="-1" aria-hidden="true"></button>
@@ -194,7 +225,7 @@ function clearServerError(name: string) {
       {:else}
         <span></span>
       {/if}
-      <Button disabled={status === 'submitting'} onclick={next}>
+      <Button disabled={submitDisabled} onclick={next}>
         {status === 'submitting' ? submittingLabel : isLastStep ? submitLabel : 'Continue'}
       </Button>
     </div>

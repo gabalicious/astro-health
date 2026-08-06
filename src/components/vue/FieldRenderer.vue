@@ -1,5 +1,6 @@
 <script setup lang="ts" generic="TValues extends Record<string, string>">
 import { computed } from 'vue';
+import { Checkbox } from '@/components/vue/ui/checkbox';
 import { Input } from '@/components/vue/ui/input';
 import { Label } from '@/components/vue/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/vue/ui/radio-group';
@@ -55,14 +56,28 @@ function onChange(handleChange: (value: string) => void, value: unknown) {
   >
     <template v-slot="{ field: f }">
       <div class="grid gap-2">
-        <div class="grid gap-1">
+        <!-- Checkboxes label to the right; every other kind labels above. -->
+        <div v-if="field.kind !== 'checkbox'" class="grid gap-1">
           <Label :for="field.name" class="text-sm font-medium">{{ field.label }}</Label>
           <p v-if="field.hint" class="text-sm text-muted-foreground">{{ field.hint }}</p>
         </div>
 
+        <div v-if="field.kind === 'checkbox'" class="flex items-start gap-3">
+          <Checkbox
+            :id="field.name"
+            :model-value="f.state.value === 'true'"
+            class="mt-0.5"
+            @update:model-value="(v: unknown) => onChange(f.handleChange, v === true ? 'true' : '')"
+          />
+          <div class="grid gap-1">
+            <Label :for="field.name" class="text-sm font-medium">{{ field.label }}</Label>
+            <p v-if="field.hint" class="text-sm text-muted-foreground">{{ field.hint }}</p>
+          </div>
+        </div>
+
         <!-- A two-option unit switch wants a compact toggle, not stacked cards. -->
         <RadioGroup
-          v-if="field.kind === 'segmented'"
+          v-else-if="field.kind === 'segmented'"
           :model-value="f.state.value"
           class="grid-flow-col auto-cols-fr gap-1 rounded-lg bg-muted p-1"
           @update:model-value="(value: unknown) => onChange(f.handleChange, value)"

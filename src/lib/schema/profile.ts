@@ -239,3 +239,43 @@ export const profileDefaults: ProfileDraft = {
   sex: '',
   activityLevel: '',
 };
+
+/**
+ * Inverse of the wire transform: a canonical-metric payload back into an
+ * all-string draft in the user's own units, for prefilled edit forms.
+ *
+ * Total inches are rounded to one decimal BEFORE splitting into ft/in —
+ * splitting first lets 91.4 cm (a stored 3'0") decompose as an invalid 2'12".
+ * Every payload the forward transform can produce round-trips exactly.
+ */
+export function draftFromProfile(profile: ProfilePayload): ProfileDraft {
+  const draft: ProfileDraft = {
+    ...profileDefaults,
+    unitSystem: profile.unitSystem,
+    goal: profile.goal,
+    rateKgPerWeek:
+      profile.rateKgPerWeek === undefined ? '' : (String(profile.rateKgPerWeek) as RateChoice),
+    age: String(profile.age),
+    sex: profile.sex,
+    activityLevel: profile.activityLevel,
+  };
+
+  if (profile.unitSystem === 'metric') {
+    draft.heightCm = String(profile.heightCm);
+    draft.weightKg = String(profile.weightKg);
+    draft.targetWeightKg =
+      profile.targetWeightKg === undefined ? '' : String(profile.targetWeightKg);
+  } else {
+    const totalIn = round1(profile.heightCm / CM_PER_IN);
+    const ft = Math.floor(totalIn / 12);
+    draft.heightFt = String(ft);
+    draft.heightIn = String(round1(totalIn - ft * 12));
+    draft.weightLb = String(round1(profile.weightKg / KG_PER_LB));
+    draft.targetWeightLb =
+      profile.targetWeightKg === undefined
+        ? ''
+        : String(round1(profile.targetWeightKg / KG_PER_LB));
+  }
+
+  return draft;
+}

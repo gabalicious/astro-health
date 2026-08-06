@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { type ProfileDraft, profileSchema } from './profile';
+import { draftFromProfile, type ProfileDraft, profileSchema } from './profile';
 
 /** A complete, valid metric draft; override per test. */
 function draft(overrides: Partial<ProfileDraft> = {}): ProfileDraft {
@@ -123,5 +123,87 @@ describe('profileSchema — clearInapplicable', () => {
     expect(result.success).toBe(true);
     expect(result.data?.targetWeightKg).toBeUndefined();
     expect(result.data?.rateKgPerWeek).toBeUndefined();
+  });
+});
+
+describe('draftFromProfile', () => {
+  it('round-trips a metric payload exactly', () => {
+    const payload = profileSchema.parse(draft());
+    const revived = draftFromProfile(payload);
+
+    expect(revived).toMatchObject({
+      unitSystem: 'metric',
+      goal: 'lose_weight',
+      heightCm: '180',
+      weightKg: '80',
+      targetWeightKg: '72',
+      rateKgPerWeek: '0.5',
+      age: '30',
+      heightFt: '',
+      weightLb: '',
+    });
+    expect(profileSchema.parse(revived)).toEqual(payload);
+  });
+
+  it('round-trips an imperial payload exactly', () => {
+    const payload = profileSchema.parse(
+      draft({
+        unitSystem: 'imperial',
+        heightCm: '',
+        weightKg: '',
+        targetWeightKg: '',
+        heightFt: '5',
+        heightIn: '11',
+        weightLb: '194',
+        targetWeightLb: '175',
+      }),
+    );
+    const revived = draftFromProfile(payload);
+
+    expect(revived).toMatchObject({
+      unitSystem: 'imperial',
+      heightFt: '5',
+      heightIn: '11',
+      weightLb: '194',
+      targetWeightLb: '175',
+      heightCm: '',
+      weightKg: '',
+    });
+    expect(profileSchema.parse(revived)).toEqual(payload);
+  });
+
+  it('splits 91.4 cm as 3 ft 0 in, not 2 ft 12 in', () => {
+    // Regression: total inches must be rounded to one decimal BEFORE the ft/in
+    // split. 91.4 / 2.54 = 35.98..., and flooring that puts 12 in the inch box.
+    const payload = profileSchema.parse(
+      draft({
+        unitSystem: 'imperial',
+        goal: 'maintain',
+        heightCm: '',
+        weightKg: '',
+        targetWeightKg: '',
+        rateKgPerWeek: '',
+        heightFt: '3',
+        heightIn: '0',
+        weightLb: '80',
+      }),
+    );
+    expect(payload.heightCm).toBe(91.4);
+
+    const revived = draftFromProfile(payload);
+    expect(revived.heightFt).toBe('3');
+    expect(revived.heightIn).toBe('0');
+    expect(profileSchema.parse(revived)).toEqual(payload);
+  });
+
+  it('leaves target and rate empty for goals that do not use them', () => {
+    const payload = profileSchema.parse(
+      draft({ goal: 'maintain', targetWeightKg: '', rateKgPerWeek: '' }),
+    );
+    const revived = draftFromProfile(payload);
+
+    expect(revived.targetWeightKg).toBe('');
+    expect(revived.rateKgPerWeek).toBe('');
+    expect(profileSchema.parse(revived)).toEqual(payload);
   });
 });

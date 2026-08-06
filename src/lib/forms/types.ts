@@ -15,7 +15,12 @@ export type FieldKind =
   | 'select'
   | 'radio-cards'
   /** Compact two-or-three option toggle, e.g. metric vs imperial. */
-  | 'segmented';
+  | 'segmented'
+  /**
+   * Inline checkbox (control left, label right). Draft value is '' | 'true' so
+   * form values stay all-string.
+   */
+  | 'checkbox';
 
 export interface FieldOption {
   value: string;

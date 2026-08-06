@@ -20,8 +20,7 @@ export const signupRoutes = new Hono().post(
     }
   }),
   (c) => {
-    // The password is validated but not yet stored; hashing lands with the database.
-    const { email } = c.req.valid('json');
+    const { email, password } = c.req.valid('json');
 
     if (findUserByEmail(email)) {
       return c.json(
@@ -34,7 +33,7 @@ export const signupRoutes = new Hono().post(
       );
     }
 
-    const user = createUser(email);
+    const user = createUser(email, password);
     startSession(c, createSession(user.id));
 
     return c.json({ ok: true as const, userId: user.id }, 201);
