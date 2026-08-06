@@ -13,7 +13,7 @@ pre-bundling goes stale and islands fail to hydrate with `504 Outdated
 Optimize Dep`.
 
 Checks: `pnpm check` (Biome lint + format), `pnpm typecheck` (`astro check`),
-`pnpm build`.
+`pnpm build`, `pnpm test` (Vitest), `pnpm e2e` (Playwright).
 
 `pnpm typecheck` runs three checkers, because each only covers its own files:
 `astro check` (.astro), `vue-tsc` (.vue) and `svelte-check` (.svelte, via
@@ -22,6 +22,23 @@ Checking only `.astro` would leave most of the app untyped.
 
 `astro check` needs TypeScript 6.x; TypeScript 7's native compiler does not yet
 expose the API it relies on, so the devDependency is pinned to `^6`.
+
+## Testing
+
+- `pnpm test` — Vitest over `src/lib/**/*.test.ts`: the schema (unit
+  conversion, required-when rules, `clearInapplicable`) and the plan math
+  (`computePlan` anchors are hand-computed — if you change a constant, recompute
+  them, do not fudge the assertions).
+- `pnpm e2e` — Playwright (`e2e/`). It builds and serves the app itself on
+  **port 4322** (never 4321, so a live dev server can't be mistaken for the
+  built app). Full matrix of {vue,svelte} × {metric,imperial} plus regressions:
+  the stale-error single-click bug, anon onboarding rejected, duplicate email,
+  conditional fields, back/forward persistence.
+- e2e gotchas learned the hard way: wait for `astro-island:not([ssr])` before
+  interacting (Astro drops the `ssr` attribute after hydration — clicks before
+  that are no-ops), and use `\s+` rather than `.` in text regexes (Svelte keeps
+  template newlines in text nodes; Vue's compiler condenses them).
+- CI (`.github/workflows/ci.yml`) runs check → typecheck → test → build → e2e.
 
 ## Architecture
 
@@ -52,6 +69,13 @@ between them except the rendering layer.
 - `src/lib/forms/signup-form.ts` and `src/lib/forms/onboarding-wizard.ts` — the
   step and field definitions. **Adding or reordering a field means editing only
   one of these plus its schema; both frameworks pick it up.**
+- `src/lib/plan.ts` — pure plan math (Mifflin-St Jeor BMR → TDEE → calorie
+  target with safety floors → macros → timeline). No dates, no IO; the server
+  computes it in `/api/onboarding` and returns it, and each framework's
+  `PlanCard` renders it via the `FormWizard` success slot/snippet.
+  `prefer_not_to_say` uses the midpoint sex term (−78). Timelines come from the
+  post-floor *effective* deficit, so a floored plan honestly shows more weeks
+  than the requested rate implies.
 - `src/components/{vue,svelte}/` — per framework: a `FieldRenderer` (one field),
   a generic `FormWizard` (steps, navigation, submit — it drops the step chrome
   when a config has a single step, so the same engine renders both flows), and

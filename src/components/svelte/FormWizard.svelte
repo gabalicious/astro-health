@@ -1,10 +1,13 @@
 <script lang="ts" generics="TValues extends Record<string, string>">
 import { createForm } from '@tanstack/svelte-form';
+import type { Snippet } from 'svelte';
 import FieldRenderer from '@/components/svelte/FieldRenderer.svelte';
 import Button from '@/components/svelte/ui/Button.svelte';
 import Progress from '@/components/svelte/ui/Progress.svelte';
 import type { ApiResult, FieldErrors } from '@/lib/api';
 import { stepIndexOfField, visibleFields, type WizardConfig } from '@/lib/forms/types';
+
+type OkResult = Extract<ApiResult, { ok: true }>;
 
 let {
   config,
@@ -14,6 +17,7 @@ let {
   successTitle,
   successDescription,
   onSuccess,
+  success,
 }: {
   config: WizardConfig<TValues>;
   submit: (values: TValues) => Promise<ApiResult>;
@@ -23,6 +27,8 @@ let {
   successDescription: string;
   /** Lets the caller navigate on success instead of resting on the done card. */
   onSuccess?: (result: { userId: string }) => void;
+  /** Replaces the whole success card; omit it to keep the static one. */
+  success?: Snippet<[{ result: OkResult }]>;
 } = $props();
 
 const steps = config.steps;
@@ -35,6 +41,7 @@ let stepAttempted = $state(false);
 let status = $state<'idle' | 'submitting' | 'done'>('idle');
 let serverErrors = $state<FieldErrors>({});
 let serverMessage = $state<string | null>(null);
+let successResult = $state<OkResult | null>(null);
 
 const values = $derived(selector.current as TValues);
 const step = $derived(steps[stepIndex]);
@@ -87,6 +94,7 @@ async function send() {
   const result = await submit({ ...values });
 
   if (result.ok) {
+    successResult = result;
     status = 'done';
     onSuccess?.(result);
     return;
@@ -112,13 +120,17 @@ function clearServerError(name: string) {
 }
 </script>
 
-{#if status === 'done'}
-  <div class="w-full max-w-xl rounded-xl border bg-card text-card-foreground shadow-sm">
-    <div class="grid gap-1.5 px-6 py-6">
-      <h2 class="text-lg font-semibold leading-none">{successTitle}</h2>
-      <p class="text-sm text-muted-foreground">{successDescription}</p>
+{#if status === 'done' && successResult}
+  {#if success}
+    {@render success({ result: successResult })}
+  {:else}
+    <div class="w-full max-w-xl rounded-xl border bg-card text-card-foreground shadow-sm">
+      <div class="grid gap-1.5 px-6 py-6">
+        <h2 class="text-lg font-semibold leading-none">{successTitle}</h2>
+        <p class="text-sm text-muted-foreground">{successDescription}</p>
+      </div>
     </div>
-  </div>
+  {/if}
 {:else}
   <div class="w-full max-w-xl rounded-xl border bg-card text-card-foreground shadow-sm">
     <div class="grid gap-3 px-6 pt-6">

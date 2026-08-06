@@ -124,6 +124,31 @@ const statsStep: StepConfig<ProfileDraft> = {
       showIf: (values) => wantsTarget(values) && isImperial(values),
     }),
     field({
+      name: 'rateKgPerWeek',
+      kind: 'radio-cards',
+      label: 'Weekly rate',
+      hint: 'How fast you want to get there. Slower is easier to keep up.',
+      schema: profileFieldSchemas.rateKgPerWeek,
+      showIf: wantsTarget,
+      options: [
+        {
+          value: '0.25',
+          label: '0.25 kg · about 0.5 lb per week',
+          description: 'Gentle — you will barely feel the deficit.',
+        },
+        {
+          value: '0.5',
+          label: '0.5 kg · about 1 lb per week',
+          description: 'Steady — the sustainable default.',
+        },
+        {
+          value: '1',
+          label: '1 kg · about 2 lb per week',
+          description: 'Ambitious — takes real discipline.',
+        },
+      ],
+    }),
+    field({
       name: 'age',
       kind: 'number',
       label: 'Age',

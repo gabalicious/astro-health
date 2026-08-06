@@ -15,6 +15,8 @@ import { Progress } from '@/components/vue/ui/progress';
 import type { ApiResult, FieldErrors } from '@/lib/api';
 import { stepIndexOfField, visibleFields, type WizardConfig } from '@/lib/forms/types';
 
+type OkResult = Extract<ApiResult, { ok: true }>;
+
 const props = defineProps<{
   config: WizardConfig<TValues>;
   submit: (values: TValues) => Promise<ApiResult>;
@@ -24,6 +26,11 @@ const props = defineProps<{
   successDescription: string;
   /** Lets the caller navigate on success instead of resting on the done card. */
   onSuccess?: (result: { userId: string }) => void;
+}>();
+
+defineSlots<{
+  /** Replaces the whole success card; omit it to keep the static one. */
+  success?: (props: { result: OkResult }) => unknown;
 }>();
 
 const steps = props.config.steps;
@@ -36,6 +43,7 @@ const stepAttempted = ref(false);
 const status = ref<'idle' | 'submitting' | 'done'>('idle');
 const serverErrors = ref<FieldErrors>({});
 const serverMessage = ref<string | null>(null);
+const successResult = ref<OkResult | null>(null);
 
 const step = computed(() => steps[stepIndex.value]);
 const fields = computed(() => visibleFields(step.value, values.value));
@@ -91,6 +99,7 @@ async function send() {
   const result = await props.submit({ ...values.value });
 
   if (result.ok) {
+    successResult.value = result;
     status.value = 'done';
     props.onSuccess?.(result);
     return;
@@ -117,12 +126,16 @@ function clearServerError(name: string) {
 </script>
 
 <template>
-  <Card v-if="status === 'done'" class="w-full max-w-xl">
-    <CardHeader>
-      <CardTitle>{{ successTitle }}</CardTitle>
-      <CardDescription>{{ successDescription }}</CardDescription>
-    </CardHeader>
-  </Card>
+  <template v-if="status === 'done' && successResult">
+    <slot name="success" :result="successResult">
+      <Card class="w-full max-w-xl">
+        <CardHeader>
+          <CardTitle>{{ successTitle }}</CardTitle>
+          <CardDescription>{{ successDescription }}</CardDescription>
+        </CardHeader>
+      </Card>
+    </slot>
+  </template>
 
   <Card v-else class="w-full max-w-xl">
     <CardHeader>

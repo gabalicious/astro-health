@@ -42,11 +42,16 @@ export const GOALS = ['lose_weight', 'build_muscle', 'maintain', 'general_fitnes
 export const SEXES = ['female', 'male', 'prefer_not_to_say'] as const;
 export const ACTIVITY_LEVELS = ['sedentary', 'light', 'moderate', 'very_active'] as const;
 export const UNIT_SYSTEMS = ['metric', 'imperial'] as const;
+/** Weekly weight-loss pace. String values so the draft stays all-string. */
+export const RATES = ['0.25', '0.5', '1'] as const;
 
 export type Goal = (typeof GOALS)[number];
 export type Sex = (typeof SEXES)[number];
 export type ActivityLevel = (typeof ACTIVITY_LEVELS)[number];
 export type UnitSystem = (typeof UNIT_SYSTEMS)[number];
+export type RateChoice = (typeof RATES)[number];
+
+const RATE_VALUES = { '0.25': 0.25, '0.5': 0.5, '1': 1 } as const;
 
 const KG_PER_LB = 0.45359237;
 const CM_PER_IN = 2.54;
@@ -71,10 +76,15 @@ export const profileFieldSchemas = {
   weightLb: numeric('Weight', LB_RANGE),
   targetWeightKg: numeric('Target weight', KG_RANGE),
   targetWeightLb: numeric('Target weight', LB_RANGE),
+  rateKgPerWeek: z.enum(RATES, { error: 'Choose a weekly rate to continue.' }),
   age: numeric('Age', { min: 13, max: 120, int: true }),
   sex: z.enum(SEXES, { error: 'Choose an option to continue.' }),
   activityLevel: z.enum(ACTIVITY_LEVELS, { error: 'Choose an activity level to continue.' }),
 } as const;
+
+const optionalRate = z
+  .union([z.literal(''), z.enum(RATES, { error: 'Choose a weekly rate to continue.' })])
+  .transform((value) => (value === '' ? undefined : RATE_VALUES[value]));
 
 /** Present only when validated above; the check below guarantees it. */
 function required(value: number | undefined): number {
@@ -97,7 +107,7 @@ function clearInapplicable(raw: unknown) {
       ? ['heightCm', 'weightKg', 'targetWeightKg']
       : ['heightFt', 'heightIn', 'weightLb', 'targetWeightLb'];
 
-  if (value.goal !== 'lose_weight') drop.push('targetWeightKg', 'targetWeightLb');
+  if (value.goal !== 'lose_weight') drop.push('targetWeightKg', 'targetWeightLb', 'rateKgPerWeek');
 
   const next = { ...value };
   for (const key of drop) next[key] = '';
@@ -122,6 +132,7 @@ const profilePayloadSchema = z
     weightLb: optionalNumeric('Weight', LB_RANGE),
     targetWeightKg: optionalNumeric('Target weight', KG_RANGE),
     targetWeightLb: optionalNumeric('Target weight', LB_RANGE),
+    rateKgPerWeek: optionalRate,
     age: profileFieldSchemas.age,
     sex: profileFieldSchemas.sex,
     activityLevel: profileFieldSchemas.activityLevel,
@@ -151,6 +162,10 @@ const profilePayloadSchema = z
           'Set a target weight so we can pace your plan.',
         );
       }
+
+      if (value.rateKgPerWeek === undefined) {
+        missing('rateKgPerWeek', 'Choose how fast you want to lose it.');
+      }
     }
   })
   // Hand the server one canonical shape, whatever the user typed in.
@@ -175,6 +190,7 @@ const profilePayloadSchema = z
       heightCm,
       weightKg,
       targetWeightKg,
+      rateKgPerWeek: value.rateKgPerWeek,
       age: value.age,
       sex: value.sex,
       activityLevel: value.activityLevel,
@@ -201,6 +217,7 @@ export type ProfileDraft = {
   weightLb: string;
   targetWeightKg: string;
   targetWeightLb: string;
+  rateKgPerWeek: RateChoice | '';
   age: string;
   sex: Sex | '';
   activityLevel: ActivityLevel | '';
@@ -217,6 +234,7 @@ export const profileDefaults: ProfileDraft = {
   weightLb: '',
   targetWeightKg: '',
   targetWeightLb: '',
+  rateKgPerWeek: '',
   age: '',
   sex: '',
   activityLevel: '',

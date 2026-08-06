@@ -1,10 +1,11 @@
+import type { Plan } from '@/lib/plan';
 import type { AccountDraft } from '@/lib/schema/account';
 import type { ProfileDraft } from '@/lib/schema/profile';
 
 export type FieldErrors = Record<string, string[] | undefined>;
 
 export type ApiResult =
-  | { ok: true; userId: string }
+  | { ok: true; userId: string; plan?: Plan }
   | { ok: false; message: string; fieldErrors: FieldErrors };
 
 async function post(path: string, body: unknown): Promise<ApiResult> {
