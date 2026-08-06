@@ -1,42 +1,15 @@
 import { z } from 'zod';
+import { type NumericOptions, numeric, optionalNumeric, round1 } from './numeric';
 
 /**
  * The single source of truth for the onboarding profile.
  *
- * Number inputs live in form state as strings (that is what a DOM input gives
- * us), so every numeric field is a string on the way in and a number on the way
- * out. The schema is therefore also the unit boundary: the wire carries whatever
- * the user actually typed plus the unit system they picked, and `z.output` is
- * canonical metric. Validating in the user's own units is what lets the error
- * messages talk about pounds when they are entering pounds.
+ * Numeric fields are strings in and numbers out (see `./numeric`), so the schema
+ * is also the unit boundary: the wire carries whatever the user actually typed
+ * plus the unit system they picked, and `z.output` is canonical metric.
+ * Validating in the user's own units is what lets the error messages talk about
+ * pounds when they are entering pounds.
  */
-
-interface NumericOptions {
-  min: number;
-  max: number;
-  int?: boolean;
-}
-
-function numeric(label: string, { min, max, int = false }: NumericOptions) {
-  let value = z
-    .number({ error: `${label} must be a number.` })
-    .min(min, `${label} must be at least ${min}.`)
-    .max(max, `${label} must be at most ${max}.`);
-
-  if (int) {
-    value = value.int(`${label} must be a whole number.`);
-  }
-
-  // `Number` rather than `z.coerce.number()`: coercion widens the input type to
-  // `unknown`, which cannot be piped from a string.
-  return z.string().trim().min(1, `${label} is required.`).transform(Number).pipe(value);
-}
-
-function optionalNumeric(label: string, options: NumericOptions) {
-  return z
-    .union([z.literal(''), numeric(label, options)])
-    .transform((value) => (value === '' ? undefined : value));
-}
 
 export const GOALS = ['lose_weight', 'build_muscle', 'maintain', 'general_fitness'] as const;
 export const SEXES = ['female', 'male', 'prefer_not_to_say'] as const;
@@ -55,8 +28,6 @@ const RATE_VALUES = { '0.25': 0.25, '0.5': 0.5, '1': 1 } as const;
 
 const KG_PER_LB = 0.45359237;
 const CM_PER_IN = 2.54;
-
-const round1 = (value: number) => Math.round(value * 10) / 10;
 
 // Equivalent ranges, expressed in each unit so the messages read naturally.
 const KG_RANGE = { min: 25, max: 400 } satisfies NumericOptions;

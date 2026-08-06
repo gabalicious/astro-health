@@ -29,21 +29,21 @@ export function currentUserId(c: Context): string | undefined {
   return userIdForSession(getCookie(c, SESSION_COOKIE));
 }
 
-/** Guards onboarding: the profile has to belong to somebody. */
-export const requireSession: MiddlewareHandler<SessionEnv> = async (c, next) => {
-  const userId = currentUserId(c);
+/** Guards anything user-owned; the message is the caller's to phrase. */
+export function requireSessionWith(message: string): MiddlewareHandler<SessionEnv> {
+  return async (c, next) => {
+    const userId = currentUserId(c);
 
-  if (!userId) {
-    return c.json(
-      {
-        ok: false,
-        message: 'Create your account before setting up your plan.',
-        fieldErrors: {},
-      },
-      401,
-    );
-  }
+    if (!userId) {
+      return c.json({ ok: false, message, fieldErrors: {} }, 401);
+    }
 
-  c.set('userId', userId);
-  await next();
-};
+    c.set('userId', userId);
+    await next();
+  };
+}
+
+/** Guards onboarding and the profile: it has to belong to somebody. */
+export const requireSession = requireSessionWith(
+  'Create your account before setting up your plan.',
+);

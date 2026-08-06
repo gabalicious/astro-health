@@ -25,7 +25,8 @@ expose the API it relies on, so the devDependency is pinned to `^6`.
 
 ## Testing
 
-- `pnpm test` — Vitest over `src/lib/**/*.test.ts`: the schema (unit
+- `pnpm test` — Vitest over `src/lib/**/*.test.ts` (the `@/*` alias is mirrored
+  in `vitest.config.ts`; Vitest does not read tsconfig paths on its own): the schema (unit
   conversion, required-when rules, `clearInapplicable`) and the plan math
   (`computePlan` anchors are hand-computed — if you change a constant, recompute
   them, do not fudge the assertions).
@@ -81,8 +82,14 @@ between them except the rendering layer.
   measurements the unit system or goal makes irrelevant, so the API never
   rejects a value it is about to discard.
 - `src/lib/forms/types.ts` — framework-agnostic `FieldConfig` / `StepConfig` /
-  `WizardConfig`, plus `visibleFields`, `stepIndexOfField` and `errorMessages`,
+  `WizardConfig`, plus `visibleFields`, `stepIndexOfField`, `errorMessages`,
+  `groupErrorMessages`, `validationNames`, `rowFieldName` and `cloneDraft`,
   which both renderers share.
+- `src/lib/schema/numeric.ts` — the string-in/number-out helpers (`numeric`,
+  `optionalNumeric`, `round1`) shared by the profile and workout schemas.
+- `src/data/exercises.json` + `src/lib/data/exercises.ts` — the seeded exercise
+  catalogue. The workout config derives its picker options from it, so the data
+  drives the form rather than the form hard-coding the data.
 - `src/lib/forms/signup-form.ts` and `src/lib/forms/onboarding-wizard.ts` — the
   step and field definitions. **Adding or reordering a field means editing only
   one of these plus its schema; both frameworks pick it up.**
@@ -97,12 +104,46 @@ between them except the rendering layer.
   a generic `FormWizard` (steps, navigation, submit — it drops the step chrome
   when a config has a single step, so the same engine renders both flows), and
   thin `SignupForm` / `OnboardingWizard` wrappers binding config to endpoint.
-- `src/server/store.ts` — in-memory users, sessions and profiles. It resets on
+- `src/server/store.ts` — in-memory users, sessions, profiles and workouts. It resets on
   restart. Passwords are scrypt-hashed with per-user salts and compared in
   constant time — stub-grade, but never plaintext.
 - `src/server/` — the Hono app, mounted at `src/pages/api/[...path].ts`. It owns
   the `/api` prefix via `.basePath('/api')` because Astro forwards the original
   URL untouched.
+
+### Repeaters (field arrays)
+
+`/workouts/{vue,svelte}` logs one exercise with N sets, and is the only flow
+with a repeated group. What it changed:
+
+- Draft values widened from `Record<string, string>` to **`DraftValues`**
+  (`Record<string, string | DraftRow[]>`). `FieldConfig` is now a discriminated
+  union of `ScalarFieldConfig | RepeaterFieldConfig`; a repeater declares its
+  row shape via `itemFields` + `itemDefaults`.
+- TanStack addresses rows **by index**: `sets[2].reps` — brackets for indices,
+  dots for keys. `sets.2.reps` is not a valid path. Build names only with
+  `rowFieldName`; string concatenation loses the template-literal type.
+- Because names are index-derived, `{#each}` / `v-for` over rows is keyed **by
+  index**, not by a synthetic id — DOM identity has to follow position or a
+  removal leaves a row bound to its old neighbour's name. The e2e "removes the
+  middle row" test exists to prove this per framework.
+- `FieldRenderer` takes an optional `name` prop that overrides the bound path,
+  and **the DOM id follows it too** — otherwise every row renders `id="reps"`
+  and the ids collide.
+- Add uses `{ ...field.itemDefaults }`; forms are seeded through `cloneDraft`.
+  Both exist so rows never alias one shared object. `cloneDraft` rather than
+  `structuredClone`, which throws on the reactive proxies both frameworks hand
+  back.
+- `mode="array"` on the parent `form.Field` is a subscription switch (it watches
+  `meta._arrayVersion`), so the group re-renders on add/remove but not on every
+  keystroke inside a row.
+- A Zod array schema reports its rows' problems too. `groupErrorMessages` keeps
+  only path-less issues for the group-level slot, since row issues are already
+  rendered under the offending input.
+- `fieldErrorsFromIssues` (`src/lib/schema/errors.ts`) folds Zod paths into the
+  same names the client binds (`sets[1].reps`). `z.flattenError` only reaches
+  the top level and would file every row error under `sets`; flat routes still
+  use it because for them the output is identical.
 
 Conventions worth keeping:
 

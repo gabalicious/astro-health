@@ -1,11 +1,13 @@
 import type { Plan } from '@/lib/plan';
 import type { AccountDraft, LoginDraft } from '@/lib/schema/account';
 import type { ProfileDraft, ProfilePayload } from '@/lib/schema/profile';
+import type { WorkoutDraft } from '@/lib/schema/workout';
+import type { LoggedWorkout } from '@/server/store';
 
 export type FieldErrors = Record<string, string[] | undefined>;
 
 export type ApiResult =
-  | { ok: true; userId: string; plan?: Plan; onboarded?: boolean }
+  | { ok: true; userId: string; plan?: Plan; onboarded?: boolean; workout?: LoggedWorkout }
   | { ok: false; message: string; fieldErrors: FieldErrors };
 
 async function post(path: string, body: unknown): Promise<ApiResult> {
@@ -80,4 +82,36 @@ export async function fetchProfile(): Promise<ProfileFetchResult> {
   }
 
   return { status: 'ok', profile: body.profile };
+}
+
+/** Records a training session against the current user. */
+export const submitWorkout = (values: WorkoutDraft) => post('/api/workouts', values);
+
+export type WorkoutsFetchResult =
+  | { status: 'ok'; workouts: LoggedWorkout[] }
+  | { status: 'unauthenticated' }
+  | { status: 'error'; message: string };
+
+/** Loads the training log for the recent-sessions list. */
+export async function fetchWorkouts(): Promise<WorkoutsFetchResult> {
+  let response: Response;
+
+  try {
+    response = await fetch('/api/workouts');
+  } catch {
+    return { status: 'error', message: 'We could not reach the server.' };
+  }
+
+  if (response.status === 401) return { status: 'unauthenticated' };
+
+  const body = (await response.json().catch(() => null)) as
+    | { ok: true; workouts: LoggedWorkout[] }
+    | { ok: false }
+    | null;
+
+  if (!body?.ok) {
+    return { status: 'error', message: 'The server returned an unexpected response.' };
+  }
+
+  return { status: 'ok', workouts: body.workouts };
 }

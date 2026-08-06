@@ -1,0 +1,103 @@
+[
+  {
+    "id": "barbell-bench-press",
+    "name": "Barbell Bench Press",
+    "muscle": "Chest",
+    "equipment": "Barbell"
+  },
+  {
+    "id": "incline-dumbbell-press",
+    "name": "Incline Dumbbell Press",
+    "muscle": "Chest",
+    "equipment": "Dumbbell"
+  },
+  { "id": "cable-fly", "name": "Cable Fly", "muscle": "Chest", "equipment": "Cable" },
+  { "id": "push-up", "name": "Push-Up", "muscle": "Chest", "equipment": "Bodyweight" },
+
+  {
+    "id": "barbell-back-squat",
+    "name": "Barbell Back Squat",
+    "muscle": "Legs",
+    "equipment": "Barbell"
+  },
+  { "id": "front-squat", "name": "Front Squat", "muscle": "Legs", "equipment": "Barbell" },
+  {
+    "id": "romanian-deadlift",
+    "name": "Romanian Deadlift",
+    "muscle": "Legs",
+    "equipment": "Barbell"
+  },
+  {
+    "id": "bulgarian-split-squat",
+    "name": "Bulgarian Split Squat",
+    "muscle": "Legs",
+    "equipment": "Dumbbell"
+  },
+  { "id": "leg-press", "name": "Leg Press", "muscle": "Legs", "equipment": "Machine" },
+  { "id": "walking-lunge", "name": "Walking Lunge", "muscle": "Legs", "equipment": "Dumbbell" },
+  { "id": "leg-curl", "name": "Seated Leg Curl", "muscle": "Legs", "equipment": "Machine" },
+  {
+    "id": "standing-calf-raise",
+    "name": "Standing Calf Raise",
+    "muscle": "Legs",
+    "equipment": "Machine"
+  },
+
+  {
+    "id": "conventional-deadlift",
+    "name": "Conventional Deadlift",
+    "muscle": "Back",
+    "equipment": "Barbell"
+  },
+  { "id": "barbell-row", "name": "Barbell Row", "muscle": "Back", "equipment": "Barbell" },
+  { "id": "pull-up", "name": "Pull-Up", "muscle": "Back", "equipment": "Bodyweight" },
+  { "id": "lat-pulldown", "name": "Lat Pulldown", "muscle": "Back", "equipment": "Cable" },
+  { "id": "seated-cable-row", "name": "Seated Cable Row", "muscle": "Back", "equipment": "Cable" },
+  {
+    "id": "single-arm-dumbbell-row",
+    "name": "Single-Arm Dumbbell Row",
+    "muscle": "Back",
+    "equipment": "Dumbbell"
+  },
+
+  {
+    "id": "overhead-press",
+    "name": "Overhead Press",
+    "muscle": "Shoulders",
+    "equipment": "Barbell"
+  },
+  {
+    "id": "dumbbell-shoulder-press",
+    "name": "Dumbbell Shoulder Press",
+    "muscle": "Shoulders",
+    "equipment": "Dumbbell"
+  },
+  {
+    "id": "lateral-raise",
+    "name": "Lateral Raise",
+    "muscle": "Shoulders",
+    "equipment": "Dumbbell"
+  },
+  { "id": "face-pull", "name": "Face Pull", "muscle": "Shoulders", "equipment": "Cable" },
+
+  { "id": "barbell-curl", "name": "Barbell Curl", "muscle": "Arms", "equipment": "Barbell" },
+  {
+    "id": "dumbbell-hammer-curl",
+    "name": "Dumbbell Hammer Curl",
+    "muscle": "Arms",
+    "equipment": "Dumbbell"
+  },
+  { "id": "triceps-pushdown", "name": "Triceps Pushdown", "muscle": "Arms", "equipment": "Cable" },
+  { "id": "skull-crusher", "name": "Skull Crusher", "muscle": "Arms", "equipment": "Barbell" },
+  { "id": "dip", "name": "Dip", "muscle": "Arms", "equipment": "Bodyweight" },
+
+  { "id": "plank", "name": "Plank", "muscle": "Core", "equipment": "Bodyweight" },
+  {
+    "id": "hanging-leg-raise",
+    "name": "Hanging Leg Raise",
+    "muscle": "Core",
+    "equipment": "Bodyweight"
+  },
+  { "id": "cable-crunch", "name": "Cable Crunch", "muscle": "Core", "equipment": "Cable" },
+  { "id": "back-extension", "name": "Back Extension", "muscle": "Core", "equipment": "Bodyweight" }
+]

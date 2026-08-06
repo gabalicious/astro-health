@@ -1,7 +1,8 @@
-<script setup lang="ts" generic="TValues extends Record<string, string>">
+<script setup lang="ts" generic="TValues extends DraftValues">
 import { useForm } from '@tanstack/vue-form';
 import { computed, ref, watch } from 'vue';
 import FieldRenderer from '@/components/vue/FieldRenderer.vue';
+import RepeaterField from '@/components/vue/RepeaterField.vue';
 import { Button } from '@/components/vue/ui/button';
 import {
   Card,
@@ -13,7 +14,14 @@ import {
 } from '@/components/vue/ui/card';
 import { Progress } from '@/components/vue/ui/progress';
 import type { ApiResult, FieldErrors } from '@/lib/api';
-import { stepIndexOfField, visibleFields, type WizardConfig } from '@/lib/forms/types';
+import {
+  cloneDraft,
+  type DraftValues,
+  stepIndexOfField,
+  validationNames,
+  visibleFields,
+  type WizardConfig,
+} from '@/lib/forms/types';
 
 type OkResult = Extract<ApiResult, { ok: true }>;
 
@@ -39,7 +47,9 @@ defineSlots<{
 
 const renderMode = props.mode ?? 'wizard';
 const steps = props.config.steps;
-const defaults = props.initialValues ?? props.config.defaults;
+// Cloned: a repeater's default rows are an array, and sharing that reference
+// across form instances would let one form mutate another's defaults.
+const defaults = cloneDraft(props.initialValues ?? props.config.defaults);
 
 const form = useForm({ defaultValues: defaults });
 const values = form.useSelector((state) => state.values);
@@ -92,7 +102,9 @@ async function validateStep(): Promise<boolean> {
   // Use this run's results rather than the field's aggregated meta, which can
   // still hold errors recorded under a validation cause that has not re-run.
   const results = await Promise.all(
-    fieldsToValidate.value.map((field) => form.validateField(field.name, 'submit')),
+    validationNames(fieldsToValidate.value, values.value).map((name) =>
+      form.validateField(name, 'submit'),
+    ),
   );
   return results.every((errors) => errors.length === 0);
 }
@@ -189,7 +201,16 @@ function clearServerError(name: string) {
               :key="field.name"
               :class="field.span === 'half' ? 'col-span-1' : 'col-span-2'"
             >
+              <RepeaterField
+                v-if="field.kind === 'repeater'"
+                :field="field"
+                :form="form"
+                :step-attempted="stepAttempted"
+                :server-errors="serverErrors"
+                @clear-server-error="clearServerError"
+              />
               <FieldRenderer
+                v-else
                 :field="field"
                 :form="form"
                 :step-attempted="stepAttempted"

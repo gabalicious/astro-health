@@ -3,6 +3,7 @@ import { loginRoutes } from './routes/login';
 import { onboardingRoutes } from './routes/onboarding';
 import { profileRoutes } from './routes/profile';
 import { signupRoutes } from './routes/signup';
+import { workoutRoutes } from './routes/workouts';
 import { currentUserId } from './session';
 import { getProfile } from './store';
 
@@ -21,7 +22,8 @@ export const app = new Hono()
   .route('/', signupRoutes)
   .route('/', loginRoutes)
   .route('/', onboardingRoutes)
-  .route('/', profileRoutes);
+  .route('/', profileRoutes)
+  .route('/', workoutRoutes);
 
 app.notFound((c) => c.json({ ok: false, message: 'Not found' }, 404));
 

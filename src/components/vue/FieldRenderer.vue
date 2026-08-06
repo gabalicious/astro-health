@@ -1,4 +1,4 @@
-<script setup lang="ts" generic="TValues extends Record<string, string>">
+<script setup lang="ts" generic="TValues extends DraftValues">
 import { computed } from 'vue';
 import { Checkbox } from '@/components/vue/ui/checkbox';
 import { Input } from '@/components/vue/ui/input';
@@ -11,10 +11,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/vue/ui/select';
-import { errorMessages, type FieldConfig } from '@/lib/forms/types';
+import { type DraftValues, errorMessages, type ScalarFieldConfig } from '@/lib/forms/types';
 
 const props = defineProps<{
-  field: FieldConfig<TValues>;
+  field: ScalarFieldConfig<TValues>;
+  /** Overrides the bound path, e.g. `sets[0].reps` inside a repeater. */
+  name?: string;
   // The TanStack form instance. Its generics are keyed to literal field names,
   // so a generator that iterates over config can only see it loosely typed.
   // biome-ignore lint/suspicious/noExplicitAny: see above
@@ -25,6 +27,10 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<(event: 'clearServerError', name: string) => void>();
+
+// Rows share a config but must not share DOM ids: inside a repeater this is
+// `sets[0].reps`, not `reps`.
+const fieldId = computed(() => props.name ?? props.field.name);
 
 const inputType = computed(() =>
   props.field.kind === 'number' ? 'text' : (props.field.kind ?? 'text'),
@@ -45,32 +51,32 @@ function visibleErrors(fieldErrors: readonly unknown[], isBlurred: boolean): str
 // state is always a string, so normalise here rather than at every call site.
 function onChange(handleChange: (value: string) => void, value: unknown) {
   handleChange(value == null ? '' : String(value));
-  if (props.serverErrors?.length) emit('clearServerError', props.field.name);
+  if (props.serverErrors?.length) emit('clearServerError', props.name ?? props.field.name);
 }
 </script>
 
 <template>
   <form.Field
-    :name="field.name"
+    :name="name ?? field.name"
     :validators="{ onChange: field.schema }"
   >
     <template v-slot="{ field: f }">
       <div class="grid gap-2">
         <!-- Checkboxes label to the right; every other kind labels above. -->
         <div v-if="field.kind !== 'checkbox'" class="grid gap-1">
-          <Label :for="field.name" class="text-sm font-medium">{{ field.label }}</Label>
+          <Label :for="fieldId" class="text-sm font-medium">{{ field.label }}</Label>
           <p v-if="field.hint" class="text-sm text-muted-foreground">{{ field.hint }}</p>
         </div>
 
         <div v-if="field.kind === 'checkbox'" class="flex items-start gap-3">
           <Checkbox
-            :id="field.name"
+            :id="fieldId"
             :model-value="f.state.value === 'true'"
             class="mt-0.5"
             @update:model-value="(v: unknown) => onChange(f.handleChange, v === true ? 'true' : '')"
           />
           <div class="grid gap-1">
-            <Label :for="field.name" class="text-sm font-medium">{{ field.label }}</Label>
+            <Label :for="fieldId" class="text-sm font-medium">{{ field.label }}</Label>
             <p v-if="field.hint" class="text-sm text-muted-foreground">{{ field.hint }}</p>
           </div>
         </div>
@@ -85,11 +91,11 @@ function onChange(handleChange: (value: string) => void, value: unknown) {
           <label
             v-for="option in field.options"
             :key="option.value"
-            :for="`${field.name}-${option.value}`"
+            :for="`${fieldId}-${option.value}`"
             class="flex cursor-pointer items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors has-[[data-state=checked]]:bg-background has-[[data-state=checked]]:text-foreground has-[[data-state=checked]]:shadow-sm has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50"
           >
             <RadioGroupItem
-              :id="`${field.name}-${option.value}`"
+              :id="`${fieldId}-${option.value}`"
               :value="option.value"
               class="sr-only"
             />
@@ -107,11 +113,11 @@ function onChange(handleChange: (value: string) => void, value: unknown) {
           <label
             v-for="option in field.options"
             :key="option.value"
-            :for="`${field.name}-${option.value}`"
+            :for="`${fieldId}-${option.value}`"
             class="flex cursor-pointer items-start gap-3 rounded-lg border border-input p-4 transition-colors hover:bg-accent/40 has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary/5"
           >
             <RadioGroupItem
-              :id="`${field.name}-${option.value}`"
+              :id="`${fieldId}-${option.value}`"
               :value="option.value"
               class="mt-0.5"
             />
@@ -129,7 +135,7 @@ function onChange(handleChange: (value: string) => void, value: unknown) {
           :model-value="f.state.value || undefined"
           @update:model-value="(value: unknown) => onChange(f.handleChange, value)"
         >
-          <SelectTrigger :id="field.name" class="w-full">
+          <SelectTrigger :id="fieldId" class="w-full">
             <SelectValue :placeholder="field.placeholder ?? 'Select an option'" />
           </SelectTrigger>
           <SelectContent>
@@ -141,7 +147,7 @@ function onChange(handleChange: (value: string) => void, value: unknown) {
 
         <div v-else class="relative">
           <Input
-            :id="field.name"
+            :id="fieldId"
             :type="inputType"
             :inputmode="inputMode"
             :placeholder="field.placeholder"

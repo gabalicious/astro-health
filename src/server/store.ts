@@ -1,5 +1,6 @@
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import type { ProfilePayload } from '@/lib/schema/profile';
+import type { WorkoutPayload } from '@/lib/schema/workout';
 
 /**
  * In-memory stand-in for the database. It resets whenever the server restarts —
@@ -19,6 +20,7 @@ const usersById = new Map<string, User>();
 const userIdByEmail = new Map<string, string>();
 const profilesByUserId = new Map<string, ProfilePayload>();
 const sessions = new Map<string, string>();
+const workoutsByUserId = new Map<string, LoggedWorkout[]>();
 
 const normalise = (email: string) => email.trim().toLowerCase();
 
@@ -75,4 +77,25 @@ export function saveProfile(userId: string, profile: ProfilePayload) {
 
 export function getProfile(userId: string): ProfilePayload | undefined {
   return profilesByUserId.get(userId);
+}
+
+export type LoggedWorkout = WorkoutPayload & {
+  id: string;
+  loggedAt: string;
+};
+
+export function addWorkout(userId: string, workout: WorkoutPayload): LoggedWorkout {
+  const logged: LoggedWorkout = {
+    ...workout,
+    id: crypto.randomUUID(),
+    loggedAt: new Date().toISOString(),
+  };
+
+  workoutsByUserId.set(userId, [logged, ...(workoutsByUserId.get(userId) ?? [])]);
+  return logged;
+}
+
+/** Newest first — a training log is read from the top. */
+export function listWorkouts(userId: string): LoggedWorkout[] {
+  return workoutsByUserId.get(userId) ?? [];
 }

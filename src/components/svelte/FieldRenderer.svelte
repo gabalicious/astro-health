@@ -1,4 +1,4 @@
-<script lang="ts" generics="TValues extends Record<string, string>">
+<script lang="ts" generics="TValues extends DraftValues">
 import type { FullAutoFill } from 'svelte/elements';
 import Checkbox from '@/components/svelte/ui/Checkbox.svelte';
 import Input from '@/components/svelte/ui/Input.svelte';
@@ -6,7 +6,7 @@ import Label from '@/components/svelte/ui/Label.svelte';
 import RadioCards from '@/components/svelte/ui/RadioCards.svelte';
 import Segmented from '@/components/svelte/ui/Segmented.svelte';
 import Select from '@/components/svelte/ui/Select.svelte';
-import { errorMessages, type FieldConfig } from '@/lib/forms/types';
+import { type DraftValues, errorMessages, type ScalarFieldConfig } from '@/lib/forms/types';
 
 // TanStack's field API is keyed to literal field names; a config-driven
 // renderer can only hold it loosely typed.
@@ -15,12 +15,15 @@ type AnyFieldApi = any;
 
 let {
   field,
+  name,
   form,
   stepAttempted,
   serverErrors,
   onClearServerError,
 }: {
-  field: FieldConfig<TValues>;
+  field: ScalarFieldConfig<TValues>;
+  /** Overrides the bound path, e.g. `sets[0].reps` inside a repeater. */
+  name?: string;
   // TanStack's generics are keyed to literal field names, so a renderer driven
   // by config can only hold the form loosely typed.
   // biome-ignore lint/suspicious/noExplicitAny: see above
@@ -29,6 +32,10 @@ let {
   serverErrors?: string[];
   onClearServerError: (name: string) => void;
 } = $props();
+
+// Rows share a config but must not share DOM ids: inside a repeater this is
+// `sets[0].reps`, not `reps`.
+const fieldId = $derived(name ?? field.name);
 
 const inputType = $derived(field.kind === 'number' ? 'text' : field.kind);
 
@@ -40,12 +47,12 @@ function visibleErrors(fieldErrors: readonly unknown[], isBlurred: boolean): str
 
 function change(handleChange: (value: string) => void, value: string) {
   handleChange(value);
-  if (serverErrors?.length) onClearServerError(field.name);
+  if (serverErrors?.length) onClearServerError(name ?? field.name);
 }
 </script>
 
 <form.Field
-  name={field.name}
+  name={name ?? field.name}
   validators={{ onChange: field.schema }}
 >
   {#snippet children(f: AnyFieldApi)}
@@ -54,7 +61,7 @@ function change(handleChange: (value: string) => void, value: string) {
       <!-- Checkboxes label to the right; every other kind labels above. -->
       {#if field.kind !== 'checkbox'}
         <div class="grid gap-1">
-          <Label for={field.name}>{field.label}</Label>
+          <Label for={fieldId}>{field.label}</Label>
           {#if field.hint}
             <p class="text-sm text-muted-foreground">{field.hint}</p>
           {/if}
@@ -64,12 +71,12 @@ function change(handleChange: (value: string) => void, value: string) {
       {#if field.kind === 'checkbox'}
         <div class="flex items-start gap-3">
           <Checkbox
-            id={field.name}
+            id={fieldId}
             checked={f.state.value === 'true'}
             onCheckedChange={(checked) => change(f.handleChange, checked ? 'true' : '')}
           />
           <div class="grid gap-1">
-            <Label for={field.name}>{field.label}</Label>
+            <Label for={fieldId}>{field.label}</Label>
             {#if field.hint}
               <p class="text-sm text-muted-foreground">{field.hint}</p>
             {/if}
@@ -77,21 +84,21 @@ function change(handleChange: (value: string) => void, value: string) {
         </div>
       {:else if field.kind === 'segmented'}
         <Segmented
-          name={field.name}
+          name={fieldId}
           value={f.state.value}
           options={field.options ?? []}
           onValueChange={(value) => change(f.handleChange, value)}
         />
       {:else if field.kind === 'radio-cards'}
         <RadioCards
-          name={field.name}
+          name={fieldId}
           value={f.state.value}
           options={field.options ?? []}
           onValueChange={(value) => change(f.handleChange, value)}
         />
       {:else if field.kind === 'select'}
         <Select
-          id={field.name}
+          id={fieldId}
           value={f.state.value}
           options={field.options ?? []}
           placeholder={field.placeholder}
@@ -101,7 +108,7 @@ function change(handleChange: (value: string) => void, value: string) {
       {:else}
         <div class="relative">
           <Input
-            id={field.name}
+            id={fieldId}
             type={inputType}
             inputmode={field.kind === 'number' ? 'decimal' : undefined}
             placeholder={field.placeholder}
