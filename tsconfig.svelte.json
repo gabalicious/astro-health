@@ -1,0 +1,6 @@
+{
+  "// note": "svelte-check needs a program that excludes the Vue components, whose .vue imports it cannot resolve.",
+  "extends": "./tsconfig.json",
+  "include": [".astro/types.d.ts", "src/**/*.ts", "src/**/*.svelte"],
+  "exclude": ["dist", "src/components/vue"]
+}

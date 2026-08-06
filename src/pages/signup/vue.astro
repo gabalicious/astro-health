@@ -1,0 +1,15 @@
+---
+import SignupForm from '@/components/vue/SignupForm.vue';
+import Layout from '@/layouts/Layout.astro';
+---
+
+<Layout title="Create account · Vue">
+  <main class="mx-auto flex min-h-screen w-full max-w-3xl flex-col items-center gap-6 px-6 py-16">
+    <header class="w-full max-w-xl">
+      <a href="/" class="text-sm text-muted-foreground hover:text-foreground">← Both versions</a>
+      <h1 class="mt-2 text-2xl font-semibold tracking-tight">Vue implementation</h1>
+      <p class="text-sm text-muted-foreground">Step one of two: create the account.</p>
+    </header>
+    <SignupForm next="/onboarding/vue" client:load />
+  </main>
+</Layout>

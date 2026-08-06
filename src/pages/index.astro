@@ -1,11 +1,70 @@
 ---
-import Welcome from '../components/Welcome.astro';
-import Layout from '../layouts/Layout.astro';
+import Layout from '@/layouts/Layout.astro';
+import { onboardingWizard } from '@/lib/forms/onboarding-wizard';
+import { signupForm } from '@/lib/forms/signup-form';
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+const implementations = [
+  {
+    href: '/signup/vue',
+    name: 'Vue',
+    stack: 'shadcn-vue · TanStack Vue Form',
+  },
+  {
+    href: '/signup/svelte',
+    name: 'Svelte',
+    stack: 'Bits UI · TanStack Svelte Form',
+  },
+];
+
+const flow = [
+  { label: 'Create account', steps: signupForm.steps },
+  { label: 'Onboarding', steps: onboardingWizard.steps },
+];
 ---
 
-<Layout>
-	<Welcome />
+<Layout title="Astro Health">
+  <main class="mx-auto flex min-h-screen w-full max-w-3xl flex-col justify-center gap-10 px-6 py-16">
+    <div class="grid gap-3">
+      <h1 class="text-3xl font-semibold tracking-tight">Astro Health onboarding</h1>
+      <p class="max-w-prose text-muted-foreground">
+        Sign up first, then answer the onboarding questions. Both flows are described once as
+        schema-driven config and rendered twice — the Vue and Svelte versions share the same Zod
+        schemas, field definitions and Hono endpoints, so only the rendering layer differs.
+      </p>
+    </div>
+
+    <div class="grid gap-4 sm:grid-cols-2">
+      {
+        implementations.map((implementation) => (
+          <a
+            href={implementation.href}
+            class="group grid gap-2 rounded-xl border bg-card p-6 shadow-sm transition-colors hover:border-primary hover:bg-accent/40"
+          >
+            <span class="text-lg font-medium">{implementation.name}</span>
+            <span class="text-sm text-muted-foreground">{implementation.stack}</span>
+            <span class="mt-2 text-sm text-primary">
+              Start signup <span class="transition-transform group-hover:translate-x-0.5">→</span>
+            </span>
+          </a>
+        ))
+      }
+    </div>
+
+    <div class="grid gap-4 sm:grid-cols-2">
+      {
+        flow.map((phase) => (
+          <div class="grid gap-2 text-sm text-muted-foreground">
+            <span class="font-medium text-foreground">{phase.label}</span>
+            <ol class="grid gap-1">
+              {phase.steps.map((step, index) => (
+                <li>
+                  {index + 1}. {step.title}
+                </li>
+              ))}
+            </ol>
+          </div>
+        ))
+      }
+    </div>
+  </main>
 </Layout>

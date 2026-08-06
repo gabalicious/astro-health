@@ -1,0 +1,5 @@
+allowBuilds:
+  esbuild: true
+  # vue-demi's postinstall picks the Vue 2/3 shim; without it @tanstack/vue-form
+  # resolves to an unswitched build.
+  vue-demi: true
