@@ -1,0 +1,12 @@
+# [settings]
+# disable_tools = ["bun"]
+
+[tools]
+node = "24.16.0"
+pnpm = "11.20.0"
+
+[env]
+# Use the standalone (system) bun from ~/.bun instead of the mise-managed one.
+# This replaces the manual `export BUN_INSTALL=...` / `export PATH=...` lines.
+# BUN_INSTALL = "{{env.HOME}}/.bun"
+# _.path = ["{{env.HOME}}/.bun/bin"]
