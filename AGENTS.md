@@ -87,6 +87,10 @@ between them except the rendering layer.
   which both renderers share.
 - `src/lib/schema/numeric.ts` — the string-in/number-out helpers (`numeric`,
   `optionalNumeric`, `round1`) shared by the profile and workout schemas.
+- `src/lib/design-gallery.ts` + `/design/{vue,svelte}` — a token / primitive /
+  field-kind gallery rendered by both kits from one shared data module. Kit
+  asymmetries are documented there as data (`GALLERY_NOTES`), deliberately not
+  fixed. Add new field kinds or primitives to the gallery when they are created.
 - `src/data/exercises.json` + `src/lib/data/exercises.ts` — the seeded exercise
   catalogue. The workout config derives its picker options from it, so the data
   drives the form rather than the form hard-coding the data.
