@@ -1,79 +1,65 @@
 ---
 import Layout from '@/layouts/Layout.astro';
-import { onboardingWizard } from '@/lib/forms/onboarding-wizard';
-import { signupForm } from '@/lib/forms/signup-form';
 
-const implementations = [
+const SCREENS = [
   {
-    href: '/signup/vue',
-    name: 'Vue',
-    stack: 'shadcn-vue · TanStack Vue Form',
+    segment: 'signup',
+    label: 'Create account',
+    blurb: 'Email and password. A single-step config through the same engine.',
   },
   {
-    href: '/signup/svelte',
-    name: 'Svelte',
-    stack: 'Bits UI · TanStack Svelte Form',
+    segment: 'onboarding',
+    label: 'Onboarding',
+    blurb: 'Goal, body stats in either unit system, activity — then your daily plan.',
   },
-];
-
-const flow = [
-  { label: 'Create account', steps: signupForm.steps },
-  { label: 'Onboarding', steps: onboardingWizard.steps },
+  {
+    segment: 'workouts',
+    label: 'Log a workout',
+    blurb: 'Repeated field groups: every set is a row in one array field.',
+  },
+  {
+    segment: 'settings',
+    label: 'Settings',
+    blurb: 'The onboarding config again, flat and prefilled. Needs an account.',
+  },
+  {
+    segment: 'login',
+    label: 'Log in',
+    blurb: 'Form-level errors, and a checkbox that stretches the session.',
+  },
 ];
 ---
 
 <Layout title="Astro Health">
   <main class="mx-auto flex min-h-screen w-full max-w-3xl flex-col justify-center gap-10 px-6 py-16">
     <div class="grid gap-3">
-      <h1 class="text-3xl font-semibold tracking-tight">Astro Health onboarding</h1>
+      <h1 class="text-3xl font-semibold tracking-tight">Astro Health</h1>
       <p class="max-w-prose text-muted-foreground">
-        Sign up first, then answer the onboarding questions. Both flows are described once as
-        schema-driven config and rendered twice — the Vue and Svelte versions share the same Zod
-        schemas, field definitions and Hono endpoints, so only the rendering layer differs.
+        Every screen is described once as schema-driven config and rendered twice. The Vue and
+        Svelte versions share the same Zod schemas, field definitions and Hono endpoints, so the
+        only thing that differs between them is the rendering layer.
+      </p>
+      <p class="max-w-prose text-sm text-muted-foreground">
+        Start with <a href="/signup/vue" class="text-primary hover:underline">Vue</a> or
+        <a href="/signup/svelte" class="text-primary hover:underline">Svelte</a>. Once you are in,
+        every page has a nav — including a link to the same screen in the other stack.
       </p>
     </div>
 
-    <div class="grid gap-4 sm:grid-cols-2">
+    <div class="grid gap-3">
       {
-        implementations.map((implementation) => (
-          <a
-            href={implementation.href}
-            class="group grid gap-2 rounded-xl border bg-card p-6 shadow-sm transition-colors hover:border-primary hover:bg-accent/40"
-          >
-            <span class="text-lg font-medium">{implementation.name}</span>
-            <span class="text-sm text-muted-foreground">{implementation.stack}</span>
-            <span class="mt-2 text-sm text-primary">
-              Start signup <span class="transition-transform group-hover:translate-x-0.5">→</span>
+        SCREENS.map((screen) => (
+          <div class="flex flex-wrap items-baseline gap-x-4 gap-y-1 rounded-xl border bg-card p-5 shadow-sm">
+            <span class="text-base font-medium">{screen.label}</span>
+            <span class="flex-1 text-sm text-muted-foreground">{screen.blurb}</span>
+            <span class="flex gap-3 text-sm">
+              <a href={`/${screen.segment}/vue`} class="text-primary hover:underline">
+                Vue
+              </a>
+              <a href={`/${screen.segment}/svelte`} class="text-primary hover:underline">
+                Svelte
+              </a>
             </span>
-          </a>
-        ))
-      }
-    </div>
-
-    <p class="text-sm text-muted-foreground">
-      Log a workout with
-      <a href="/workouts/vue" class="text-primary hover:underline">Vue</a> or
-      <a href="/workouts/svelte" class="text-primary hover:underline">Svelte</a>.
-    </p>
-
-    <p class="text-sm text-muted-foreground">
-      Already have an account? Log in with
-      <a href="/login/vue" class="text-primary hover:underline">Vue</a> or
-      <a href="/login/svelte" class="text-primary hover:underline">Svelte</a>.
-    </p>
-
-    <div class="grid gap-4 sm:grid-cols-2">
-      {
-        flow.map((phase) => (
-          <div class="grid gap-2 text-sm text-muted-foreground">
-            <span class="font-medium text-foreground">{phase.label}</span>
-            <ol class="grid gap-1">
-              {phase.steps.map((step, index) => (
-                <li>
-                  {index + 1}. {step.title}
-                </li>
-              ))}
-            </ol>
           </div>
         ))
       }

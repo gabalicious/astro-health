@@ -3,11 +3,10 @@ import SettingsForm from '@/components/svelte/SettingsForm.svelte';
 import Layout from '@/layouts/Layout.astro';
 ---
 
-<Layout title="Your settings · Svelte">
-  <main class="mx-auto flex min-h-screen w-full max-w-3xl flex-col items-center gap-6 px-6 py-16">
+<Layout title="Your settings · Svelte" framework="svelte">
+  <main class="mx-auto flex min-h-screen w-full max-w-3xl flex-col items-center gap-6 px-6 py-12">
     <header class="w-full max-w-xl">
-      <a href="/" class="text-sm text-muted-foreground hover:text-foreground">← Both versions</a>
-      <h1 class="mt-2 text-2xl font-semibold tracking-tight">Svelte implementation</h1>
+      <h1 class="text-2xl font-semibold tracking-tight">Svelte implementation</h1>
       <p class="text-sm text-muted-foreground">
         Adjust your answers — your plan recalculates when you save.
       </p>

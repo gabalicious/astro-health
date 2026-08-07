@@ -3,9 +3,24 @@ import '@/styles/global.css';
 
 interface Props {
   title?: string;
+  /** Renders the app nav for that stack. Omit it on the index page. */
+  framework?: 'vue' | 'svelte';
 }
 
-const { title = 'Astro Health' } = Astro.props;
+const { title = 'Astro Health', framework } = Astro.props;
+
+const SECTIONS = [
+  { segment: 'signup', label: 'Sign up' },
+  { segment: 'onboarding', label: 'Onboarding' },
+  { segment: 'workouts', label: 'Workouts' },
+  { segment: 'settings', label: 'Settings' },
+  { segment: 'login', label: 'Log in' },
+];
+
+const path = Astro.url.pathname.replace(/\/$/, '');
+const other = framework === 'vue' ? 'svelte' : 'vue';
+// Same screen, other stack — the whole point of building it twice.
+const twin = framework ? path.replace(`/${framework}`, `/${other}`) : null;
 ---
 
 <!doctype html>
@@ -19,6 +34,37 @@ const { title = 'Astro Health' } = Astro.props;
 		<title>{title}</title>
 	</head>
 	<body class="min-h-screen bg-background text-foreground antialiased">
+		{
+			framework && (
+				<nav class="border-b">
+					<div class="mx-auto flex w-full max-w-3xl flex-wrap items-center gap-x-5 gap-y-2 px-6 py-3 text-sm">
+						<a href="/" class="font-medium hover:underline">
+							Astro Health
+						</a>
+
+						{SECTIONS.map((section) => {
+							const href = `/${section.segment}/${framework}`;
+							return (
+								<a
+									href={href}
+									aria-current={path === href ? 'page' : undefined}
+									class:list={[
+										'hover:text-foreground',
+										path === href ? 'font-medium text-foreground' : 'text-muted-foreground',
+									]}
+								>
+									{section.label}
+								</a>
+							);
+						})}
+
+						<a href={twin} class="ml-auto text-muted-foreground hover:text-foreground">
+							View in {other === 'vue' ? 'Vue' : 'Svelte'} →
+						</a>
+					</div>
+				</nav>
+			)
+		}
 		<slot />
 	</body>
 </html>
